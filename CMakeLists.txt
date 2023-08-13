@@ -5,7 +5,7 @@ include(CTest)
 enable_testing()
 
 add_compile_options(-g)
-add_executable(httpd main.c)
+add_executable(httpd main.c httpd.c httpd.h)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
