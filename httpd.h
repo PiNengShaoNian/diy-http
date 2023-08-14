@@ -27,6 +27,11 @@ typedef struct _http_request_t {
   char* version;
 } http_request_t;
 
+typedef struct _http_mime_info_t {
+  const char* extension;
+  const char* content_type;
+} http_mime_info_t;
+
 #define HTTP_SIZE_VERSION 10
 #define HTTP_SIZE_STATUS 10
 #define HTTP_SIZE_REASON 10

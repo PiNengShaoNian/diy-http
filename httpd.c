@@ -16,6 +16,27 @@ static const char *root_dir;
     printf("\n");               \
   }
 
+static const char *mime_find(const char *path) {
+  static const http_mime_info_t mime_table[] = {
+      {".html", "text/html"},
+      {".css", "text/css"},
+      {".jpg", "image/jpeg"},
+      {".bmp", "image/bmp"},
+      {".png", "image/png"},
+      {".gif", "image/gif"},
+      {".js", "application/x-javascript"},
+  };
+
+  for (int i = 0; i < sizeof(mime_table) / sizeof(mime_table[0]); i++) {
+    const http_mime_info_t *info = mime_table + i;
+    if (strstr(path, info->extension)) {
+      return info->content_type;
+    }
+  }
+
+  return "application/octet-stream";
+}
+
 void http_show_error(http_client_t *client, const char *msg) {
   printf("client: %s port %d, error: %s\n", client->ipbuf, client->port, msg);
 }
@@ -168,8 +189,8 @@ static int file_normal_send(http_client_t *client, http_request_t *request,
   http_response_t response;
   response_init(&response);
   response_set_start(&response, "HTTP/1.1", "200", "OK");
-  // response_add_property(&response, HTTP_CONTENT_LENGTH, )
   response_add_property(&response, HTTP_CONNECTION, "close");
+  response_add_property(&response, HTTP_CONTENT_TYPE, mime_find(path));
 
   ssize_t size =
       response_to_text(&response, request->data, sizeof(request->data));
