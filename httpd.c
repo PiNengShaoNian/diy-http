@@ -214,6 +214,18 @@ send_error:
   return -1;
 }
 
+static int is_cgi_exec(http_request_t *request) {
+  static const char *cgi_ext[] = {".py", ".cgi"};
+
+  for (int i = 0; i < sizeof(cgi_ext) / sizeof(cgi_ext[0]); i++) {
+    if (strstr(request->url, cgi_ext[i])) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 static int method_in(http_client_t *client, http_request_t *request) {
   const char *default_index = "index.html";
   char buf[HTTPD_SIZE_URL];
@@ -228,7 +240,11 @@ static int method_in(http_client_t *client, http_request_t *request) {
     path++;
   }
 
-  return file_normal_send(client, request, path);
+  if (is_cgi_exec(request)) {
+    return 0;
+  } else {
+    return file_normal_send(client, request, path);
+  }
 }
 
 static int process_request(http_client_t *client, http_request_t *request) {
