@@ -84,10 +84,37 @@ static int parse_request(http_client_t *client, http_request_t *request) {
   return 0;
 }
 
-static void response_init(http_response_t *response) {}
+static void response_init(http_response_t *response) {
+  memset(response, 0, sizeof(http_response_t));
+}
 
 static void response_set_start(http_response_t *response, const char *version,
-                               const char *status, const char *reason) {}
+                               const char *status, const char *reason) {
+  strcpy(response->version, version);
+  strcpy(response->status, status);
+  strcpy(response->reason, reason);
+}
+
+static void response_add_property(http_response_t *response, property_key_t key,
+                                  const char *value) {
+  property_t *p = (property_t *)0;
+
+  for (int i = 0; i < HTTPD_PROPERTY_MAX; i++) {
+    property_t *curr = response->property + i;
+    if (curr->key == HTTP_PROPERTY_NONE && !p) {
+      p = curr;
+      continue;
+    } else if (curr->key == key) {
+      p = curr;
+      break;
+    }
+  }
+
+  if (p) {
+    p->key = key;
+    strncpy(p->value, value, sizeof(p->value) - 1);
+  }
+}
 
 static int file_normal_send(http_client_t *client, http_request_t *request,
                             const char *path) {
@@ -101,6 +128,8 @@ static int file_normal_send(http_client_t *client, http_request_t *request,
   http_response_t response;
   response_init(&response);
   response_set_start(&response, "HTTP/1.1", "200", "OK");
+  // response_add_property(&response, HTTP_CONTENT_LENGTH, )
+  response_add_property(&response, HTTP_CONNECTION, "close");
 
   ssize_t size;
   while ((size = fread(request->data, 1, sizeof(request->data), file)) > 0) {
