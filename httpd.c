@@ -16,6 +16,10 @@ static const char *root_dir;
     printf("\n");               \
   }
 
+void http_show_error(http_client_t *client, const char *msg) {
+  printf("client: %s port %d, error: %s\n", client->ipbuf, client->port, msg);
+}
+
 static int send_404_not_found(http_client_t *client) {
   static const char response[] =
       "HTTP/1.1 404 File Not Found\r\n"
@@ -26,6 +30,42 @@ static int send_404_not_found(http_client_t *client) {
       "h1></"
       "body></html>";
   return send(client->sock, response, sizeof(response), 0);
+}
+
+static int read_request(http_client_t *client, http_request_t *request) {
+  return 0;
+}
+
+static int parse_request(http_client_t *client, http_request_t *request) {
+  return 0;
+}
+
+static int process_request(http_client_t *client, http_request_t *request) {
+  return 0;
+}
+
+static void client_handler(http_client_t *client) {
+  http_request_t request;
+
+  memset(&request, 0, sizeof(request));
+
+  if (read_request(client, &request) < 0) {
+    http_show_error(client, "read request error");
+    goto client_end;
+  }
+
+  if (parse_request(client, &request) < 0) {
+    http_show_error(client, "parse request error");
+    goto client_end;
+  }
+
+  if (process_request(client, &request) < 0) {
+    http_show_error(client, "process request error");
+    goto client_end;
+  }
+
+client_end:
+  httpd_log("close request");
 }
 
 void httpd_init(void) {}
@@ -57,7 +97,7 @@ int httpd_start(const char *dir, uint16_t port) {
     goto start_error;
   }
 
-  httpd_log("server is running, port: %d", port);
+  httpd_log("server is running, port: http://127.0.0.1:%d", port);
   for (;;) {
     http_client_t *client = (http_client_t *)malloc(sizeof(http_client_t));
     struct sockaddr_in addr;
@@ -72,7 +112,7 @@ int httpd_start(const char *dir, uint16_t port) {
     client->port = ntohs(addr.sin_port);
     inet_ntop(AF_INET, &addr.sin_addr, client->ipbuf, INET_ADDRSTRLEN);
     httpd_log("new client %s, port: %d", client->ipbuf, client->port);
-    send_404_not_found(client);
+    client_handler(client);
 
     httpd_log("close request");
     close(client->sock);
