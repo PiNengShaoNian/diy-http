@@ -7,6 +7,7 @@
 #define HTTPD_QUEUE_NR 5
 #define HTTPD_BUF_SIZE 1024
 #define HTTPD_SIZE_URL 32
+#define HTTP_CGI_MAX 10
 
 typedef struct _http_client_t {
   int sock;
@@ -25,6 +26,13 @@ typedef struct _http_request_t {
   char* method;
   char* url;
   char* version;
+
+  struct _cgi_param_t {
+    const char* name;
+    const char* value;
+  } cig_param[HTTP_CGI_MAX];
+
+  int param_cnt;
 } http_request_t;
 
 typedef struct _http_mime_info_t {

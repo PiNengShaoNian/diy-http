@@ -226,9 +226,65 @@ static int is_cgi_exec(http_request_t *request) {
   return 0;
 }
 
+static int cgi_format_param(http_request_t *request, char *param_start) {
+  enum {
+    CGI_PARAM_NONE,
+    CGI_PARAM_NAME,
+    CGI_PARAM_VALUE,
+  } state = CGI_PARAM_NAME;
+
+  if (param_start == NULL) {
+    return 0;
+  }
+
+  int count = 0, param_idx = 0;
+  char *end = request->url + HTTPD_SIZE_URL;
+
+  while (param_start < end && param_idx < HTTP_CGI_MAX) {
+    char c = *param_start;
+    if (c == '\0') {
+      break;
+    } else if (c == '=') {
+      *param_start = '\0';
+      state = CGI_PARAM_VALUE;
+    } else if (c == '&') {
+      *param_start = '\0';
+      state = CGI_PARAM_NAME;
+      param_idx++;
+    } else {
+      switch (state) {
+        case CGI_PARAM_NAME:
+          request->cig_param[param_idx].name = param_start;
+          state = CGI_PARAM_NONE;
+          break;
+        case CGI_PARAM_VALUE:
+          if (request->cig_param[param_idx].name == NULL) {
+            httpd_log("cig param key == 0");
+            return -1;
+          }
+
+          request->cig_param[param_idx].value = param_start;
+          state = CGI_PARAM_NONE;
+          count++;
+          break;
+      }
+    }
+
+    param_start++;
+  }
+
+  return count;
+}
+
 static int method_in(http_client_t *client, http_request_t *request) {
   const char *default_index = "index.html";
   char buf[HTTPD_SIZE_URL];
+
+  char *param_start;
+  if ((param_start = strchr(request->url, '?'))) {
+    *param_start++ = '\0';
+  }
+
   if (request->url[strlen(request->url) - 1] == '/') {
     snprintf(buf, sizeof(buf), "%s%s%s", root_dir, request->url, default_index);
   } else {
@@ -241,6 +297,7 @@ static int method_in(http_client_t *client, http_request_t *request) {
   }
 
   if (is_cgi_exec(request)) {
+    request->param_cnt = cgi_format_param(request, param_start);
     return 0;
   } else {
     return file_normal_send(client, request, path);
