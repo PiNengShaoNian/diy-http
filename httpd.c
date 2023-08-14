@@ -40,12 +40,11 @@ static int read_request(http_client_t *client, http_request_t *request) {
     request->data[HTTPD_BUF_SIZE - 1] = '\0';
     httpd_log("http read: %s", buffer);
 
+    buffer += size;
     char *header_end = strstr(request->data, "\r\n\r\n");
     if (header_end) {
       break;
     }
-
-    buffer += size;
   }
 
   if ((size < 0) || (request->data == buffer)) {
@@ -57,6 +56,31 @@ static int read_request(http_client_t *client, http_request_t *request) {
 }
 
 static int parse_request(http_client_t *client, http_request_t *request) {
+  request->data[sizeof(request->data) - 1] = '\0';
+
+  char *curr = request->data;
+  request->method = curr;
+  if ((curr = strchr(curr, ' ')) == NULL) {
+    http_show_error(client, "no method");
+    return -1;
+  }
+  *curr++ = '\0';
+
+  request->url = curr;
+  if ((curr = strchr(curr, ' ')) == NULL) {
+    http_show_error(client, "no url");
+    return -1;
+  }
+  *curr++ = '\0';
+
+  request->version = curr;
+  if ((curr = strstr(curr, "\r\n")) == NULL) {
+    http_show_error(client, "no version");
+    return -1;
+  }
+  *curr = '\0';
+  curr += 2;
+
   return 0;
 }
 
