@@ -7,7 +7,7 @@ int main(void) {
 
   int start_port = 8080;
 
-  while (httpd_start(start_port++) < 0) {
+  while (httpd_start("./htdocs", start_port++) < 0) {
   }
 
   return 0;

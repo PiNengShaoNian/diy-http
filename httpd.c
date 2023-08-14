@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+static const char *root_dir;
+
 #define httpd_log(fmt, ...)     \
   {                             \
     printf("httpd:");           \
@@ -28,7 +30,9 @@ static int send_404_not_found(http_client_t *client) {
 
 void httpd_init(void) {}
 
-int httpd_start(uint16_t port) {
+int httpd_start(const char *dir, uint16_t port) {
+  root_dir = dir ? dir : "";
+
   int server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
   if (server_socket < 0) {
