@@ -84,8 +84,45 @@ static int parse_request(http_client_t *client, http_request_t *request) {
   return 0;
 }
 
-static int method_in(http_client_t *client, http_request_t *request) {
+static int file_normal_send(http_client_t *client, http_request_t *request,
+                            const char *path) {
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    http_show_error(client, "get file failed.");
+    send_404_not_found(client);
+    return -1;
+  }
+
+  ssize_t size;
+  while ((size = fread(request->data, 1, sizeof(request->data), file)) > 0) {
+    if (send(client->sock, request->data, size, 0) < 0) {
+      http_show_error(client, "http send error");
+      goto send_error;
+    }
+  }
+
+  fclose(file);
   return 0;
+send_error:
+  fclose(file);
+  return -1;
+}
+
+static int method_in(http_client_t *client, http_request_t *request) {
+  const char *default_index = "index.html";
+  char buf[HTTPD_SIZE_URL];
+  if (request->url[strlen(request->url) - 1] == '/') {
+    snprintf(buf, sizeof(buf), "%s%s%s", root_dir, request->url, default_index);
+  } else {
+    snprintf(buf, sizeof(buf), "%s%s", root_dir, request->url);
+  }
+
+  char *path = buf;
+  if (path[0] == '/') {
+    path++;
+  }
+
+  return file_normal_send(client, request, path);
 }
 
 static int process_request(http_client_t *client, http_request_t *request) {
@@ -109,8 +146,7 @@ static int process_request(http_client_t *client, http_request_t *request) {
     return -1;
   }
 
-  method_in(client, request);
-  return 0;
+  return method_in(client, request);
 }
 
 static void client_handler(http_client_t *client) {

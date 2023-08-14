@@ -6,6 +6,7 @@
 
 #define HTTPD_QUEUE_NR 5
 #define HTTPD_BUF_SIZE 1024
+#define HTTPD_SIZE_URL 32
 
 typedef struct _http_client_t {
   int sock;
