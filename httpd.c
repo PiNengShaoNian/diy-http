@@ -84,7 +84,32 @@ static int parse_request(http_client_t *client, http_request_t *request) {
   return 0;
 }
 
+static int method_in(http_client_t *client, http_request_t *request) {
+  return 0;
+}
+
 static int process_request(http_client_t *client, http_request_t *request) {
+  if (request->url[0] == '\0' || strstr(request->url, "..")) {
+    http_show_error(client, "url is not valid");
+    return -1;
+  }
+
+  if (strcmp(request->version, "HTTP/1.1") != 0 &&
+      strcmp(request->version, "HTTP/1.0") != 0) {
+    http_show_error(client, "http version error");
+    return -1;
+  }
+
+  if (strcmp(request->method, "GET") == 0) {
+    request->m_code = HTTP_METHOD_GET;
+  } else if (strcmp(request->method, "POST") == 0) {
+    request->m_code = HTTP_METHOD_POST;
+  } else {
+    http_show_error(client, "http method error");
+    return -1;
+  }
+
+  method_in(client, request);
   return 0;
 }
 
