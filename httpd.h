@@ -27,6 +27,15 @@ typedef struct _http_request_t {
   char* version;
 } http_request_t;
 
+#define HTTP_SIZE_VERSION 10
+#define HTTP_SIZE_STATUS 10
+#define HTTP_SIZE_REASON 10
+typedef struct _http_response_t {
+  char version[HTTP_SIZE_VERSION];
+  char status[HTTP_SIZE_STATUS];
+  char reason[HTTP_SIZE_REASON];
+} http_response_t;
+
 void httpd_init(void);
 int httpd_start(const char* dir, uint16_t port);
 

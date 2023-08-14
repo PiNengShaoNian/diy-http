@@ -84,6 +84,11 @@ static int parse_request(http_client_t *client, http_request_t *request) {
   return 0;
 }
 
+static void response_init(http_response_t *response) {}
+
+static void response_set_start(http_response_t *response, const char *version,
+                               const char *status, const char *reason) {}
+
 static int file_normal_send(http_client_t *client, http_request_t *request,
                             const char *path) {
   FILE *file = fopen(path, "rb");
@@ -92,6 +97,10 @@ static int file_normal_send(http_client_t *client, http_request_t *request,
     send_404_not_found(client);
     return -1;
   }
+
+  http_response_t response;
+  response_init(&response);
+  response_set_start(&response, "HTTP/1.1", "200", "OK");
 
   ssize_t size;
   while ((size = fread(request->data, 1, sizeof(request->data), file)) > 0) {
