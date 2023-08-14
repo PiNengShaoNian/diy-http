@@ -33,6 +33,26 @@ static int send_404_not_found(http_client_t *client) {
 }
 
 static int read_request(http_client_t *client, http_request_t *request) {
+  char *buffer = request->data;
+  char *end = request->data + HTTPD_BUF_SIZE;
+  ssize_t size;
+  while ((size = recv(client->sock, buffer, end - buffer, 0)) > 0) {
+    request->data[HTTPD_BUF_SIZE - 1] = '\0';
+    httpd_log("http read: %s", buffer);
+
+    char *header_end = strstr(request->data, "\r\n\r\n");
+    if (header_end) {
+      break;
+    }
+
+    buffer += size;
+  }
+
+  if ((size < 0) || (request->data == buffer)) {
+    http_show_error(client, "recv http header failed.");
+    return -1;
+  }
+
   return 0;
 }
 
