@@ -116,6 +116,46 @@ static void response_add_property(http_response_t *response, property_key_t key,
   }
 }
 
+static size_t response_to_text(http_response_t *response, char *buf,
+                               size_t size) {
+  static const char *property_name_tbl[] = {
+      [HTTP_CONTENT_TYPE] = "Content-Type",
+      [HTTP_CONTENT_LENGTH] = "Content-Length",
+      [HTTP_CONNECTION] = "Connection",
+  };
+  memset(buf, 0, size);
+
+  sprintf(buf, "%s %s %s\r\n", response->version, response->status,
+          response->reason);
+  size_t start_size = strlen(buf);
+  buf += start_size;
+
+  size_t free_size = size - start_size;
+  for (int i = 0; i < HTTPD_PROPERTY_MAX; i++) {
+    property_t *curr = response->property + i;
+
+    if (curr->key == HTTP_PROPERTY_NONE) {
+      continue;
+    }
+
+    const char *name = property_name_tbl[curr->key];
+    size_t copy_size = strlen(name) + strlen(curr->value) + 4;
+    if (copy_size > free_size) {
+      httpd_log("response size error");
+      return -1;
+    }
+
+    sprintf(buf, "%s: %s\r\n", name, curr->value);
+    buf += copy_size;
+    start_size += copy_size;
+    free_size -= copy_size;
+  }
+
+  sprintf(buf, "%s", "\r\n");
+  start_size += 2;
+  return start_size;
+}
+
 static int file_normal_send(http_client_t *client, http_request_t *request,
                             const char *path) {
   FILE *file = fopen(path, "rb");
@@ -131,7 +171,14 @@ static int file_normal_send(http_client_t *client, http_request_t *request,
   // response_add_property(&response, HTTP_CONTENT_LENGTH, )
   response_add_property(&response, HTTP_CONNECTION, "close");
 
-  ssize_t size;
+  ssize_t size =
+      response_to_text(&response, request->data, sizeof(request->data));
+
+  if (send(client->sock, request->data, size, 0) < 0) {
+    http_show_error(client, "http send error");
+    goto send_error;
+  }
+
   while ((size = fread(request->data, 1, sizeof(request->data), file)) > 0) {
     if (send(client->sock, request->data, size, 0) < 0) {
       http_show_error(client, "http send error");
