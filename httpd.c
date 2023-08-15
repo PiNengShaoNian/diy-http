@@ -80,6 +80,19 @@ static int send_501_not_implemented(http_client_t *client) {
   return send(client->sock, response, sizeof(response), 0);
 }
 
+static int send_400_bad_request(http_client_t *client) {
+  static const char response[] =
+      "HTTP/1.1 400 Bad request\r\n"
+      "Content-Type: text/html\r\n"
+      "\r\n"
+      "<html><head><meta "
+      "charset=\"UTF-8\"><title>Bad request</title></head><body><h1>Bad "
+      "request</"
+      "h1></"
+      "body></html>";
+  return send(client->sock, response, sizeof(response), 0);
+}
+
 static int read_request(http_client_t *client, http_request_t *request) {
   char *buffer = request->data;
   char *end = request->data + HTTPD_BUF_SIZE;
@@ -137,6 +150,7 @@ static int parse_request(http_client_t *client, http_request_t *request) {
   char *curr = request->data;
   request->method = curr;
   if ((curr = strchr(curr, ' ')) == NULL) {
+    send_400_bad_request(client);
     http_show_error(client, "no method");
     return -1;
   }
@@ -144,6 +158,7 @@ static int parse_request(http_client_t *client, http_request_t *request) {
 
   request->url = curr;
   if ((curr = strchr(curr, ' ')) == NULL) {
+    send_400_bad_request(client);
     http_show_error(client, "no url");
     return -1;
   }
@@ -151,6 +166,7 @@ static int parse_request(http_client_t *client, http_request_t *request) {
 
   request->version = curr;
   if ((curr = strstr(curr, "\r\n")) == NULL) {
+    send_400_bad_request(client);
     http_show_error(client, "no version");
     return -1;
   }
@@ -348,6 +364,7 @@ static const http_cgi_t *cgi_find(const char *path) {
 static int cgi_internal_exec(const http_cgi_t *cgi, http_client_t *client,
                              http_request_t *request) {
   if (cgi->cgi_fun(cgi, client, request) < 0) {
+    send_400_bad_request(client);
     http_show_error(client, "cgi process error");
     return -1;
   }
