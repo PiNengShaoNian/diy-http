@@ -66,7 +66,13 @@ typedef struct _http_response_t {
   property_t property[HTTPD_PROPERTY_MAX];
 } http_response_t;
 
-void httpd_init(void);
+typedef struct _http_cgi_t {
+  const char* url;
+  int (*cgi_fun)(const struct _http_cgi_t* cgi, http_client_t* client,
+                 http_request_t* request);
+} http_cgi_t;
+
+void httpd_init(const http_cgi_t* table);
 int httpd_start(const char* dir, uint16_t port);
 
 #endif

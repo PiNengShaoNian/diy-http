@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 static const char *root_dir;
+static const http_cgi_t *cgi_table;
 
 #define httpd_log(fmt, ...)     \
   {                             \
@@ -352,7 +353,7 @@ client_end:
   httpd_log("close request");
 }
 
-void httpd_init(void) {}
+void httpd_init(const http_cgi_t *table) { cgi_table = table; }
 
 int httpd_start(const char *dir, uint16_t port) {
   root_dir = dir ? dir : "";
