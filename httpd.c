@@ -291,6 +291,17 @@ static const http_cgi_t *cgi_find(const char *path) {
   return (http_cgi_t *)0;
 }
 
+static int cgi_internal_exec(const http_cgi_t *cgi, http_client_t *client,
+                             http_request_t *request) {
+  if (cgi->cgi_fun(cgi, client, request) < 0) {
+    http_show_error(client, "cgi process error");
+    return -1;
+  }
+
+  httpd_log("cgi process ok: %s", request->url);
+  return 0;
+}
+
 static int method_in(http_client_t *client, http_request_t *request) {
   const char *default_index = "index.html";
   char buf[HTTPD_SIZE_URL];
@@ -315,6 +326,7 @@ static int method_in(http_client_t *client, http_request_t *request) {
     request->param_cnt = cgi_format_param(request, param_start);
     const http_cgi_t *cgi = cgi_find(request->url);
     if (cgi) {
+      return cgi_internal_exec(cgi, client, request);
     } else {
     }
     return 0;
