@@ -302,6 +302,39 @@ static int cgi_internal_exec(const http_cgi_t *cgi, http_client_t *client,
   return 0;
 }
 
+static int cgi_exec_process(http_client_t *client, http_request_t *request,
+                            const char *path) {
+  static const char response[] = {
+      "HTTP/1.1 200 OK\r\n"
+      "\r\n",
+  };
+  char buffer[128];
+  int length = sprintf(buffer, "python3 %s ", path);
+  for (int i = 0; i < request->param_cnt; i++) {
+    length += sprintf(buffer + length, "%s=%s ", request->cig_param[i].name,
+                      request->cig_param[i].value);
+  }
+  FILE *fp = popen(buffer, "r");
+  if (fp == NULL) {
+    http_show_error(client, "failed to run python");
+    return -1;
+  }
+
+  send(client->sock, response, sizeof(response) - 1, 0);
+
+  ssize_t size;
+  while ((size = fread(request->data, 1, sizeof(request->data), fp)) > 0) {
+    if (send(client->sock, request->data, size, 0) < 0) {
+      http_show_error(client, "http send error");
+      pclose(fp);
+      return -1;
+    }
+  }
+
+  pclose(fp);
+  return 0;
+}
+
 static int method_in(http_client_t *client, http_request_t *request) {
   const char *default_index = "index.html";
   char buf[HTTPD_SIZE_URL];
@@ -328,8 +361,13 @@ static int method_in(http_client_t *client, http_request_t *request) {
     if (cgi) {
       return cgi_internal_exec(cgi, client, request);
     } else {
+      int ret = cgi_exec_process(client, request, path);
+      if (ret < 0) {
+        http_show_error(client, "exec process failed.");
+        return -1;
+      }
+      return 0;
     }
-    return 0;
   } else {
     return file_normal_send(client, request, path);
   }
