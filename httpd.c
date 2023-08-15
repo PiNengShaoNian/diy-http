@@ -277,6 +277,20 @@ static int cgi_format_param(http_request_t *request, char *param_start) {
   return count;
 }
 
+static const http_cgi_t *cgi_find(const char *path) {
+  const http_cgi_t *cgi = cgi_table;
+
+  while (cgi->url) {
+    if (strcmp(cgi->url, path) == 0) {
+      return cgi;
+    }
+
+    cgi++;
+  }
+
+  return (http_cgi_t *)0;
+}
+
 static int method_in(http_client_t *client, http_request_t *request) {
   const char *default_index = "index.html";
   char buf[HTTPD_SIZE_URL];
@@ -299,6 +313,10 @@ static int method_in(http_client_t *client, http_request_t *request) {
 
   if (is_cgi_exec(request)) {
     request->param_cnt = cgi_format_param(request, param_start);
+    const http_cgi_t *cgi = cgi_find(request->url);
+    if (cgi) {
+    } else {
+    }
     return 0;
   } else {
     return file_normal_send(client, request, path);
