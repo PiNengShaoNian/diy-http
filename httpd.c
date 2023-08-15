@@ -54,6 +54,19 @@ static int send_404_not_found(http_client_t *client) {
   return send(client->sock, response, sizeof(response), 0);
 }
 
+static int send_403_forbidden(http_client_t *client) {
+  static const char response[] =
+      "HTTP/1.1 403 Forbidden\r\n"
+      "Content-Type: text/html\r\n"
+      "\r\n"
+      "<html><head><meta "
+      "charset=\"UTF-8\"><title>Forbidden</title></head><body><h1>Not allow "
+      "access this content</"
+      "h1></"
+      "body></html>";
+  return send(client->sock, response, sizeof(response), 0);
+}
+
 static int read_request(http_client_t *client, http_request_t *request) {
   char *buffer = request->data;
   char *end = request->data + HTTPD_BUF_SIZE;
@@ -404,6 +417,7 @@ static int method_in(http_client_t *client, http_request_t *request) {
 static int process_request(http_client_t *client, http_request_t *request) {
   if (request->url[0] == '\0' || strstr(request->url, "..")) {
     http_show_error(client, "url is not valid");
+    send_403_forbidden(client);
     return -1;
   }
 
