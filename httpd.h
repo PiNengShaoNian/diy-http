@@ -8,6 +8,7 @@
 #define HTTPD_BUF_SIZE 1024
 #define HTTPD_SIZE_URL 32
 #define HTTP_CGI_MAX 10
+#define HTTPD_MAX_CLIENT 10
 
 typedef struct _http_client_t {
   int sock;

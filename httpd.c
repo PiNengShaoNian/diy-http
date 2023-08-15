@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 
 static const char *root_dir;
 static const http_cgi_t *cgi_table;
+static sem_t client_cnt_sem;
 
 #define httpd_log(fmt, ...)     \
   {                             \
@@ -496,12 +498,14 @@ client_end:
   httpd_log("close request");
   close(client->sock);
   free(client);
+  sem_post(&client_cnt_sem);
   return NULL;
 }
 
 void httpd_init(const http_cgi_t *table) { cgi_table = table; }
 
 int httpd_start(const char *dir, uint16_t port) {
+  sem_init(&client_cnt_sem, 0, HTTPD_MAX_CLIENT);
   root_dir = dir ? dir : "";
 
   int server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -530,6 +534,7 @@ int httpd_start(const char *dir, uint16_t port) {
 
   httpd_log("server is running, port: http://127.0.0.1:%d", port);
   for (;;) {
+    sem_wait(&client_cnt_sem);
     http_client_t *client = (http_client_t *)malloc(sizeof(http_client_t));
     struct sockaddr_in addr;
     socklen_t len = sizeof(addr);
@@ -547,6 +552,7 @@ int httpd_start(const char *dir, uint16_t port) {
     pthread_t thread;
     if (pthread_create(&thread, NULL, client_thread_handler, (void *)client) <
         0) {
+      sem_post(&client_cnt_sem);
       http_show_error(client, "create client thread failed");
       close(client->sock);
       free(client);
