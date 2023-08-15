@@ -27,6 +27,8 @@ typedef struct _http_request_t {
   char* url;
   char* version;
 
+  char* body;
+
   struct _cgi_param_t {
     const char* name;
     const char* value;

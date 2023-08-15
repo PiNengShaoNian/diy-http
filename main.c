@@ -25,10 +25,32 @@ int cgi_add(const struct _http_cgi_t* cgi, http_client_t* client,
   return send(client->sock, buf, count, 0);
 }
 
+int cgi_echo(const struct _http_cgi_t* cgi, http_client_t* client,
+             http_request_t* request) {
+  char* body = request->body;
+
+  const char header[] =
+      "HTTP/1.1 200 OK\r\n"
+      "Content-Type: text/html\r\n"
+      "\r\n";
+  char* msg = strchr(body, '=');
+  if (msg == NULL) {
+    msg = "Error: no echo msg";
+  } else {
+    msg++;
+  }
+
+  return send(client->sock, msg, strlen(msg), 0);
+}
+
 static const http_cgi_t cgi_table[] = {
     {
         .url = "/add.cgi",
         .cgi_fun = cgi_add,
+    },
+    {
+        .url = "/echo.cgi",
+        .cgi_fun = cgi_echo,
     },
     {.url = 0, .cgi_fun = 0},
 };
