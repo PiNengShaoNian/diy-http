@@ -58,6 +58,7 @@ static int read_request(http_client_t *client, http_request_t *request) {
   char *buffer = request->data;
   char *end = request->data + HTTPD_BUF_SIZE;
   ssize_t size;
+  int content_length = 0;
   while ((size = recv(client->sock, buffer, end - buffer, 0)) > 0) {
     request->data[HTTPD_BUF_SIZE - 1] = '\0';
     httpd_log("http read: %s", buffer);
@@ -65,7 +66,34 @@ static int read_request(http_client_t *client, http_request_t *request) {
     buffer += size;
     char *header_end = strstr(request->data, "\r\n\r\n");
     if (header_end) {
+      request->body = header_end + 4;
+      char *content_length_str = strstr(request->data, "Content-Length:");
+      if (content_length_str) {
+        sscanf(content_length_str + strlen("Content-Length:"), "%d",
+               &content_length);
+
+        if (request->body + content_length >= end) {
+          content_length = end - request->body;
+          httpd_log("request buffer too small: %d < %d", HTTPD_BUF_SIZE,
+                    content_length);
+        }
+        request->content_length = content_length;
+        content_length -= buffer - request->body;
+      }
       break;
+    }
+  }
+
+  if (content_length > 0) {
+    int remain_bytes = content_length;
+    while (remain_bytes > 0) {
+      if ((size = recv(client->sock, buffer, remain_bytes, 0)) < 0) {
+        http_show_error(client, "recv http body failed.");
+        return -1;
+      }
+
+      remain_bytes -= size;
+      buffer += size;
     }
   }
 

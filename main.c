@@ -33,6 +33,7 @@ int cgi_echo(const struct _http_cgi_t* cgi, http_client_t* client,
       "HTTP/1.1 200 OK\r\n"
       "Content-Type: text/html\r\n"
       "\r\n";
+  send(client->sock, header, sizeof(header) - 1, 0);
   char* msg = strchr(body, '=');
   if (msg == NULL) {
     msg = "Error: no echo msg";
