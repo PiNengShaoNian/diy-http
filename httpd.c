@@ -1,6 +1,7 @@
 #include "httpd.h"
 
 #include <arpa/inet.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -470,7 +471,8 @@ static int process_request(http_client_t *client, http_request_t *request) {
   return method_in(client, request);
 }
 
-static void client_handler(http_client_t *client) {
+static void *client_thread_handler(void *arg) {
+  http_client_t *client = (http_client_t *)arg;
   http_request_t request;
 
   memset(&request, 0, sizeof(request));
@@ -492,6 +494,9 @@ static void client_handler(http_client_t *client) {
 
 client_end:
   httpd_log("close request");
+  close(client->sock);
+  free(client);
+  return NULL;
 }
 
 void httpd_init(const http_cgi_t *table) { cgi_table = table; }
@@ -538,11 +543,14 @@ int httpd_start(const char *dir, uint16_t port) {
     client->port = ntohs(addr.sin_port);
     inet_ntop(AF_INET, &addr.sin_addr, client->ipbuf, INET_ADDRSTRLEN);
     httpd_log("new client %s, port: %d", client->ipbuf, client->port);
-    client_handler(client);
-
-    httpd_log("close request");
-    close(client->sock);
-    free(client);
+    // client_handler(client);
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, client_thread_handler, (void *)client) <
+        0) {
+      http_show_error(client, "create client thread failed");
+      close(client->sock);
+      free(client);
+    }
   }
 
   close(server_socket);
