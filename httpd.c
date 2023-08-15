@@ -67,6 +67,19 @@ static int send_403_forbidden(http_client_t *client) {
   return send(client->sock, response, sizeof(response), 0);
 }
 
+static int send_501_not_implemented(http_client_t *client) {
+  static const char response[] =
+      "HTTP/1.1 501 Not implemented\r\n"
+      "Content-Type: text/html\r\n"
+      "\r\n"
+      "<html><head><meta "
+      "charset=\"UTF-8\"><title>Not implemented</title></head><body><h1>Not "
+      "implemented</"
+      "h1></"
+      "body></html>";
+  return send(client->sock, response, sizeof(response), 0);
+}
+
 static int read_request(http_client_t *client, http_request_t *request) {
   char *buffer = request->data;
   char *end = request->data + HTTPD_BUF_SIZE;
@@ -433,6 +446,7 @@ static int process_request(http_client_t *client, http_request_t *request) {
     request->m_code = HTTP_METHOD_POST;
   } else {
     http_show_error(client, "http method error");
+    send_501_not_implemented(client);
     return -1;
   }
 
